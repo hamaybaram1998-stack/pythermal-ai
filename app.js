@@ -103,7 +103,7 @@ async function openCamera(){
 }
 $('start').addEventListener('click',openCamera);
 $('flip').addEventListener('click',()=>{facing=facing==='environment'?'user':'environment';void openCamera();});
-$('save').addEventListener('click',()=>{if(!stream){status.textContent='Start camera first';return;}canvas.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='pythermal-v3-'+Date.now()+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);},'image/png');});
+$('save').addEventListener('click',()=>{if(!stream){status.textContent='Start camera first';return;}canvas.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='pythermal-v5-'+Date.now()+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);},'image/png');});
 window.addEventListener('pagehide',()=>{cameraGeneration++;if(stream)stream.getTracks().forEach(t=>t.stop());cancelAnimationFrame(frame);});
 
 const messages={
@@ -117,6 +117,8 @@ function translate(){
  document.documentElement.lang=lang.value;document.documentElement.dir=lang.value==='en'?'ltr':'rtl';
  $('languageLabel').textContent=locale.language;
  document.querySelector('header p').textContent=locale.subtitle;
+ const heading=document.querySelector('.section-heading h2');if(heading)heading.textContent=lang.value==='ku'?'کۆنترۆڵی کامێرا':lang.value==='ar'?'التحكم بالكاميرا':'Camera controls';
+ const install=document.getElementById('installApp');if(install)install.textContent=lang.value==='ku'?'دامەزراندنی ئەپ':lang.value==='ar'?'تثبيت التطبيق':'Install app';
  for(const key of ['start','flip','save','ai','off'])$(key==='off'?'aiOff':key).textContent=locale[key];
  for(const key of ['mode','palette','auto','brightness','contrast','smooth']){const label=$(key).closest('label');const node=label.querySelector('span');if(node)node.textContent=locale[key];else label.firstChild.textContent=locale[key]+' ';}
  for(const key of ['thermal','night','edges','normal'])mode.querySelector('[value="'+key+'"]').textContent=locale[key];
@@ -125,7 +127,7 @@ function translate(){
  if(!stream)status.textContent=locale.ready;
  try{localStorage.setItem('pythermal-lang',lang.value);}catch(e){}
 }
-try{lang.value=localStorage.getItem('pythermal-lang')||'ku';}catch(e){lang.value='ku';}
+try{lang.value=localStorage.getItem('pythermal-lang')||'en';}catch(e){lang.value='en';}
 lang.addEventListener('change',translate);translate();
 
 /* v4: face location only; false-color overlay is NOT thermal measurement. */
@@ -207,3 +209,15 @@ $('tempForm').addEventListener('submit',e=>{
 $('tempClear').addEventListener('click',()=>{if(confirm(ft('tempConfirm'))){try{localStorage.removeItem(TEMP_KEY);}catch(e){}renderTemperatureHistory();}});
 lang.addEventListener('change',translateV4);
 translateV4();
+
+/* v5: install prompt, offline app shell and accessible camera status. */
+let installPrompt=null;
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;const button=document.getElementById('installApp');if(button)button.hidden=false;});
+window.addEventListener('appinstalled',()=>{installPrompt=null;const button=document.getElementById('installApp');if(button)button.hidden=true;});
+document.getElementById('installApp')?.addEventListener('click',async()=>{
+ if(installPrompt){const prompt=installPrompt;installPrompt=null;await prompt.prompt();const button=document.getElementById('installApp');if(button)button.hidden=true;}
+ else{document.getElementById('installHelp').hidden=false;}
+});
+if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1')){
+ window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Offline cache unavailable:',err));});
+}
