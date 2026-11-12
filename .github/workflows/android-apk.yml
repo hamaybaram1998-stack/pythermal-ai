@@ -25,12 +25,8 @@ jobs:
           packages: ''
       - name: Generate Android launcher icon from uploaded brand image
         run: |
-          if [ -f brand/pythermal-logo.png ]; then
-            python3 -m pip install --quiet Pillow
-            python3 brand/make-icons.py
-          else
-            echo 'Brand image not uploaded yet; using Android default icon.'
-          fi
+          python3 -m pip install --quiet Pillow
+          python3 brand/make-icons.py
       - name: Build test APK
         working-directory: android
         run: |
