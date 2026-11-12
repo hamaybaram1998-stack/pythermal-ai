@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Generate branded PWA and Android icons from brand/pythermal-logo.png.
+"""Generate branded PWA and Android icons from brand/pythermal-logo-original(2).png.
 If the uploaded image is not present, generate a temporary fallback icon.
 """
 from pathlib import Path
 from PIL import Image, ImageDraw
 ROOT=Path(__file__).resolve().parents[1]
-source=ROOT/'brand'/'pythermal-logo.png'
+source=ROOT/'brand'/'pythermal-logo-original(2).png'
 if source.exists():
     im=Image.open(source).convert('RGBA')
 else:
