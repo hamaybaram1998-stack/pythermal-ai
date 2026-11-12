@@ -1,8 +1,11 @@
-# PyThermal AI v3.2 — Smart Night Vision + AI Object Detection
+# PyThermal AI v4.0 — Smart Night Vision + AI Object Detection
 
 A local Python HTTP server provides a browser camera app on Android/Termux.
 
 ## Features
+- **Optional face detection and decorative thermal-style face overlay**, using browser FaceDetector if supported or BlazeFace downloaded on demand. Overlay colors are NOT real heat readings and may not work in very dark scenes.
+- **Manual thermometer log**: user enters a real °C reading; timestamped entries stored only in this browser's localStorage, with clear-history control. No camera-based °C values are invented.
+
 - Thermal **color simulation**, night-vision enhancement, edge view, brightness and noise controls
 - Front/rear camera and PNG snapshot
 - Light level and simple frame-to-frame pixel motion estimate
@@ -20,7 +23,7 @@ git clone https://github.com/hamaybaram1998-stack/pythermal-ai.git
 cd pythermal-ai
 python server.py
 ```
-Open http://localhost:8765/?v=3 in Chrome and grant camera access. Tap Start Camera; optionally Enable AI (internet).
+Open http://localhost:8765/?v=40 in Chrome and grant camera access. Tap Start Camera; optionally Enable AI (internet).
 
 ## Update existing
 ```bash
@@ -40,3 +43,6 @@ Switch between Kurdish Sorani, Arabic, and English in the app. The language sele
 
 ## Real thermal hardware
 Actual heat detection in complete darkness requires a separate IR thermal sensor and a compatible native/USB interface. This web app does not yet read USB thermal sensors, and does not claim to. The existing 'Thermal simulation' mode only recolors visible-light camera frames.
+
+## v4.0 privacy and safety
+The camera video is processed locally in the browser. Optional face detection may download external model libraries. Temperature entries are stored in localStorage on the device, not transmitted to this Python server. Clearing browser site data also removes saved entries. The manual entry range (30–45°C) is a form validation range, not medical interpretation. The app is not a medical device, does not measure temperature, and must not be used to assess fever or make clinical decisions.
