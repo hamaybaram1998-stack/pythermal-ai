@@ -1,1 +1,36 @@
-{"name":"PyThermal AI - Camera Simulation","short_name":"PyThermal","start_url":"./","display":"standalone","background_color":"#0d0e16","theme_color":"#10111a","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
+{
+  "id": "./",
+  "name": "PyThermal AI — Smart Camera Studio",
+  "short_name": "PyThermal AI",
+  "description": "Night vision enhancement, simulated thermal palettes, optional AI object and face detection, manual thermometer log.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090d18",
+  "theme_color": "#090d18",
+  "orientation": "any",
+  "categories": [
+    "utilities",
+    "photo"
+  ],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
