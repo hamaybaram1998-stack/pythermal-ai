@@ -79,11 +79,13 @@ function render(now){
   }
   d.set(output);ctx.putImageData(img,0,0);previous=output;previousGray=gray;
   drawBoxes(w,h);
+  drawFaceOverlay(w,h);
   if(frameNo++%8===0){
    $('light').textContent='Light: '+(low?'Very low':mean<95?'Low':'OK')+' ('+Math.round(mean)+'/255)';
    $('motion').textContent='Pixel motion: '+(!samples?'—':diff/samples>16?'High':diff/samples>6?'Some':'Low');
    status.textContent=low?'LOW LIGHT: detail may be lost · NOT heat sensing':'SIMULATION · no temperature readings';
   }
+  if(faceEnabled&&!faceBusy&&now-lastFace>1800){lastFace=now;void scanFace(cameraGeneration);}
   if(aiEnabled&&model&&!detectBusy&&now-lastDetect>2200){lastDetect=now;void detect(cameraGeneration);}
  }
  frame=requestAnimationFrame(render);
@@ -92,7 +94,7 @@ async function openCamera(){
  cameraGeneration++;
  if(!navigator.mediaDevices?.getUserMedia){status.textContent='Camera unavailable: use Chrome on localhost';return;}
  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
- cancelAnimationFrame(frame);previous=null;previousGray=null;frameNo=0;detections=[];lastRender=0;
+ cancelAnimationFrame(frame);previous=null;previousGray=null;frameNo=0;detections=[];faceBox=null;lastRender=0;
  status.textContent='Opening camera…';
  try{
   const next=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:facing},width:{ideal:480}}});
@@ -125,3 +127,83 @@ function translate(){
 }
 try{lang.value=localStorage.getItem('pythermal-lang')||'ku';}catch(e){lang.value='ku';}
 lang.addEventListener('change',translate);translate();
+
+/* v4: face location only; false-color overlay is NOT thermal measurement. */
+let faceEnabled=false,faceBusy=false,lastFace=0,faceBox=null,faceDetector=null,faceModel=null;
+const faceCanvas=document.createElement('canvas');faceCanvas.width=160;faceCanvas.height=160;
+const faceCtx=faceCanvas.getContext('2d');
+const faceStrings={
+ en:{faceTitle:'Face thermal-style overlay',faceToggle:'Highlight detected face (illustration only)',faceOff:'Face detection: off',faceSearching:'Looking for a face…',faceFound:'Face detected — colors are simulated',faceMissing:'No face found; add more light',faceNote:'Decorative colors do not indicate heat or temperature.',tempTitle:'Thermometer readings',tempHelp:'Enter a reading from a real thermometer. The camera cannot measure °C.',tempLabel:'Measured body temperature (°C)',tempSave:'Save reading',tempClear:'Clear history',tempEmpty:'No readings saved',tempSaved:'Reading saved from thermometer input.',tempInvalid:'Enter a thermometer reading between 30 and 45 °C.',tempConfirm:'Delete all saved readings?',faceError:'Face detection unavailable: '},
+ ku:{faceTitle:'ڕەنگکردنی دەموچاو بە شێوازی گەرمی',faceToggle:'دیاریکردنی دەموچاو (تەنها وێنەی نمایشی)',faceOff:'ناسینەوەی دەموچاو ناچالاکە',faceSearching:'گەڕان بۆ دەموچاو…',faceFound:'دەموچاو دۆزرایەوە ـ ڕەنگەکان لاساییکراون',faceMissing:'دەموچاو نەدۆزرایەوە؛ ڕووناکی زیاد بکە',faceNote:'ڕەنگەکان پلەی گەرمی یان گەرمیی ڕاستەقینە نیشان نادەن.',tempTitle:'تۆماری پێوانەکانی تەرمۆمێتەر',tempHelp:'پلەی گەرمیی پێوراو بە تەرمۆمێتەری ڕاستەقینە بنووسە. کامێرا °C ناپێوێت.',tempLabel:'پلەی گەرمیی پێوراو (°C)',tempSave:'پاشەکەوتکردن',tempClear:'سڕینەوەی تۆمارەکان',tempEmpty:'هیچ پێوانەیەک تۆمار نەکراوە',tempSaved:'پێوانەی تەرمۆمێتەر پاشەکەوت کرا.',tempInvalid:'پێوانەیەک لە نێوان 30 و 45 °C بنووسە.',tempConfirm:'هەموو تۆمارەکان بسڕدرێنەوە؟',faceError:'ناسینەوەی دەموچاو بەردەست نییە: '},
+ ar:{faceTitle:'تلوين الوجه بأسلوب حراري',faceToggle:'تمييز الوجه المكتشف (محاكاة فقط)',faceOff:'التعرف على الوجه: متوقف',faceSearching:'جارٍ البحث عن وجه…',faceFound:'تم العثور على وجه — الألوان محاكاة',faceMissing:'لم يُكتشف وجه؛ زِد الإضاءة',faceNote:'الألوان زخرفية ولا تقيس الحرارة.',tempTitle:'سجل قراءات مقياس الحرارة',tempHelp:'أدخل قراءة من مقياس حرارة حقيقي. الكاميرا لا تقيس °C.',tempLabel:'درجة الحرارة المقاسة (°C)',tempSave:'حفظ القراءة',tempClear:'مسح السجل',tempEmpty:'لا توجد قراءات محفوظة',tempSaved:'تم حفظ قراءة مقياس الحرارة.',tempInvalid:'أدخل قراءة بين 30 و45 °C.',tempConfirm:'حذف جميع القراءات المحفوظة؟',faceError:'تعذر اكتشاف الوجه: '}
+};
+function ft(key){return (faceStrings[lang.value]||faceStrings.en)[key];}
+function translateV4(){
+ for(const key of ['faceTitle','faceNote','tempTitle','tempHelp','tempLabel','tempSave','tempClear'])$(key).textContent=ft(key);
+ $('faceToggleLabel').textContent=ft('faceToggle');
+ if(!faceEnabled)$('faceStatus').textContent=ft('faceOff');
+ renderTemperatureHistory();
+}
+async function scanFace(gen){
+ if(faceBusy||!stream||video.readyState<2)return;
+ faceBusy=true;
+ try{
+  let bounds=null;
+  if('FaceDetector' in window){
+   if(!faceDetector)faceDetector=new FaceDetector({fastMode:true,maxDetectedFaces:1});
+   const faces=await faceDetector.detect(video);
+   if(faces.length)bounds=faces[0].boundingBox;
+  }else{
+   if(!window.tf)await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
+   if(!window.blazeface)await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.1.0/dist/blazeface.min.js');
+   if(!faceModel)faceModel=await blazeface.load();
+   faceCtx.drawImage(video,0,0,160,160);
+   const faces=await faceModel.estimateFaces(faceCanvas,false);
+   if(faces.length){
+    const a=faces[0].topLeft,b=faces[0].bottomRight;
+    bounds={x:a[0]*video.videoWidth/160,y:a[1]*video.videoHeight/160,width:(b[0]-a[0])*video.videoWidth/160,height:(b[1]-a[1])*video.videoHeight/160};
+   }
+  }
+  if(gen!==cameraGeneration||!faceEnabled)return;
+  faceBox=bounds;
+  $('faceStatus').textContent=ft(bounds?'faceFound':'faceMissing');
+ }catch(e){if(gen===cameraGeneration){faceEnabled=false;$('faceToggle').checked=false;faceBox=null;$('faceStatus').textContent=ft('faceError')+e.message;}}
+ finally{faceBusy=false;}
+}
+function drawFaceOverlay(w,h){
+ if(!faceEnabled||!faceBox||!video.videoWidth)return;
+ const sx=w/video.videoWidth,sy=h/video.videoHeight;
+ const x=faceBox.x*sx,y=faceBox.y*sy,bw=faceBox.width*sx,bh=faceBox.height*sy;
+ if(bw<3||bh<3)return;
+ ctx.save();
+ ctx.beginPath();ctx.ellipse(x+bw/2,y+bh/2,bw*.48,bh*.52,0,0,Math.PI*2);ctx.clip();
+ const grad=ctx.createRadialGradient(x+bw*.53,y+bh*.48,1,x+bw*.5,y+bh*.5,Math.max(bw,bh)*.58);
+ grad.addColorStop(0,'rgba(255,235,50,.60)');grad.addColorStop(.38,'rgba(255,90,25,.42)');grad.addColorStop(.75,'rgba(145,25,170,.30)');grad.addColorStop(1,'rgba(20,60,230,.10)');
+ ctx.fillStyle=grad;ctx.fillRect(x,y,bw,bh);ctx.restore();
+ ctx.strokeStyle='#ffd75a';ctx.lineWidth=2;ctx.strokeRect(x,y,bw,bh);
+ ctx.fillStyle='#ffecb0';ctx.font='bold 11px sans-serif';ctx.fillText('SIMULATED / NOT °C',Math.max(0,x),Math.max(12,y-5));
+}
+$('faceToggle').addEventListener('change',()=>{
+ faceEnabled=$('faceToggle').checked;faceBox=null;
+ $('faceStatus').textContent=faceEnabled?ft('faceSearching'):ft('faceOff');
+ if(faceEnabled&&stream){lastFace=0;void scanFace(cameraGeneration);}
+});
+const TEMP_KEY='pythermal-v4-thermometer-readings';
+function getReadings(){try{const data=JSON.parse(localStorage.getItem(TEMP_KEY)||'[]');return Array.isArray(data)?data.filter(x=>Number.isFinite(x.value)&&Number.isFinite(x.time)).slice(0,30):[];}catch(e){return [];}}
+function renderTemperatureHistory(){
+ const list=$('tempHistory');list.replaceChildren();
+ const readings=getReadings();
+ if(!readings.length){const li=document.createElement('li');li.textContent=ft('tempEmpty');list.appendChild(li);return;}
+ for(const r of readings){const li=document.createElement('li');li.textContent=new Date(r.time).toLocaleString(lang.value==='ar'?'ar-IQ':lang.value==='ku'?'ku':'en')+' — '+r.value.toFixed(1)+' °C';list.appendChild(li);}
+}
+$('tempForm').addEventListener('submit',e=>{
+ e.preventDefault();
+ const value=Number($('tempInput').value);
+ if(!Number.isFinite(value)||value<30||value>45){$('tempFeedback').textContent=ft('tempInvalid');return;}
+ const readings=[{value,time:Date.now()},...getReadings()].slice(0,30);
+ try{localStorage.setItem(TEMP_KEY,JSON.stringify(readings));$('tempFeedback').textContent=ft('tempSaved');$('tempInput').value='';renderTemperatureHistory();}
+ catch(e){$('tempFeedback').textContent='Storage unavailable: '+e.message;}
+});
+$('tempClear').addEventListener('click',()=>{if(confirm(ft('tempConfirm'))){try{localStorage.removeItem(TEMP_KEY);}catch(e){}renderTemperatureHistory();}});
+lang.addEventListener('change',translateV4);
+translateV4();
