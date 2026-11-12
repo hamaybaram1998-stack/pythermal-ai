@@ -1,7 +1,8 @@
 'use strict';
 const $=id=>document.getElementById(id),video=$('camera'),canvas=$('view'),ctx=canvas.getContext('2d',{willReadFrequently:true});
 const status=$('status'),mode=$('mode'),palette=$('palette'),brightness=$('brightness'),contrast=$('contrast'),smooth=$('smooth'),auto=$('auto');
-let stream=null,facing='environment',frame=0,previous=null,previousGray=null,frameNo=0,model=null,aiEnabled=false,detectBusy=false,lastDetect=0,detections=[],cameraGeneration=0;
+let stream=null,facing='environment',frame=0,previous=null,previousGray=null,frameNo=0,model=null,aiEnabled=false,detectBusy=false,lastDetect=0,detections=[],cameraGeneration=0,lastRender=0;
+const aiCanvas=document.createElement('canvas');aiCanvas.width=224;aiCanvas.height=224;const aiCtx=aiCanvas.getContext('2d',{willReadFrequently:true});
 const clamp=v=>Math.max(0,Math.min(255,Math.round(v)));
 function thermal(v){
  if(palette.value==='gray')return [v,v,v];
@@ -29,7 +30,10 @@ async function detect(gen){
  if(!model||!aiEnabled||!stream||detectBusy||video.readyState<2)return;
  detectBusy=true;
  try{
-  const found=await model.detect(video,8,0.55);
+  aiCtx.drawImage(video,0,0,aiCanvas.width,aiCanvas.height);
+  const found=await model.detect(aiCanvas,5,0.55);
+  const sx=video.videoWidth/aiCanvas.width,sy=video.videoHeight/aiCanvas.height;
+  for(const item of found){item.bbox=[item.bbox[0]*sx,item.bbox[1]*sy,item.bbox[2]*sx,item.bbox[3]*sy];}
   if(gen===cameraGeneration&&aiEnabled&&stream){
    detections=found;$('aiStatus').textContent='AI: '+(found.length?found.map(x=>x.class+' '+Math.round(x.score*100)+'%').join(', '):'no objects found');
   }
@@ -50,8 +54,9 @@ function drawBoxes(w,h){
 }
 function render(now){
  if(!stream)return;
- if(video.readyState>=2&&video.videoWidth>0){
-  const w=Math.min(480,video.videoWidth),h=Math.max(1,Math.round(w*video.videoHeight/video.videoWidth));
+ if(video.readyState>=2&&video.videoWidth>0&&now-lastRender>=85){
+  lastRender=now;
+  const w=Math.min(256,video.videoWidth),h=Math.max(1,Math.round(w*video.videoHeight/video.videoWidth));
   if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;previous=null;previousGray=null;}
   ctx.drawImage(video,0,0,w,h);
   const img=ctx.getImageData(0,0,w,h),d=img.data,gray=new Uint8Array(w*h);
@@ -79,7 +84,7 @@ function render(now){
    $('motion').textContent='Pixel motion: '+(!samples?'—':diff/samples>16?'High':diff/samples>6?'Some':'Low');
    status.textContent=low?'LOW LIGHT: detail may be lost · NOT heat sensing':'SIMULATION · no temperature readings';
   }
-  if(aiEnabled&&model&&!detectBusy&&now-lastDetect>1100){lastDetect=now;void detect(cameraGeneration);}
+  if(aiEnabled&&model&&!detectBusy&&now-lastDetect>2200){lastDetect=now;void detect(cameraGeneration);}
  }
  frame=requestAnimationFrame(render);
 }
@@ -87,7 +92,7 @@ async function openCamera(){
  cameraGeneration++;
  if(!navigator.mediaDevices?.getUserMedia){status.textContent='Camera unavailable: use Chrome on localhost';return;}
  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
- cancelAnimationFrame(frame);previous=null;previousGray=null;frameNo=0;detections=[];
+ cancelAnimationFrame(frame);previous=null;previousGray=null;frameNo=0;detections=[];lastRender=0;
  status.textContent='Opening camera…';
  try{
   const next=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:facing},width:{ideal:480}}});
