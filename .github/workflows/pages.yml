@@ -19,8 +19,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Generate PWA icons
-        run: python3 generate-icons.py
+      - name: Validate source and generate icons
+        run: |
+          node --check app.js
+          python3 -m py_compile server.py generate-icons.py
+          python3 -m json.tool manifest.json > /dev/null
+          python3 generate-icons.py
+          test -s icon-192.png
+          test -s icon-512.png
       - name: Prepare static distribution
         run: |
           mkdir -p _site
