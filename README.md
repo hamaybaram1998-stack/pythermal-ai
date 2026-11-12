@@ -1,4 +1,4 @@
-# PyThermal AI v3.1 — Smart Night Vision + AI Object Detection
+# PyThermal AI v3.2 — Smart Night Vision + AI Object Detection
 
 A local Python HTTP server provides a browser camera app on Android/Termux.
 
@@ -34,3 +34,9 @@ App shortcut via Add to Home screen; **not an APK**. MIT licensed. Device-level 
 
 ## Performance note
 AI inference still runs on the browser main thread and may briefly freeze weaker devices. For maximum responsiveness disable AI. This is a mitigation, not a guaranteed fix; full worker/native inference would be needed for robust isolation.
+
+## Languages
+Switch between Kurdish Sorani, Arabic, and English in the app. The language selection is remembered locally when browser storage is available. These translations cover primary controls and the safety warning; some live status messages remain English.
+
+## Real thermal hardware
+Actual heat detection in complete darkness requires a separate IR thermal sensor and a compatible native/USB interface. This web app does not yet read USB thermal sensors, and does not claim to. The existing 'Thermal simulation' mode only recolors visible-light camera frames.
