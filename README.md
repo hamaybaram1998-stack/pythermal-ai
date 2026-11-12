@@ -1,21 +1,31 @@
-# PyThermal AI
+# PyThermal AI v2.0 — Smart Night Vision
+A mobile-friendly **visible-light camera processing app** powered by a local Python HTTP server and JavaScript Canvas.
 
-Android visible-light **thermal color simulation** using a Python localhost server and JavaScript camera interface. **Not a thermometer**: no temperature measurements or fever detection are possible with an ordinary camera.
+## Features
+- Live front/rear camera and PNG snapshots
+- Thermal **color simulation**, green night-vision style, edge highlighting, normal mode
+- Automatic low-light brightness boost and temporal noise smoothing
+- Ambient image brightness indicator and pixel motion estimate
+- Offline/local processing; no camera frames uploaded
 
-## Termux
+**Important:** This app cannot measure temperature or heat, detect people in complete darkness, or see infrared thermal radiation using a normal RGB camera. AI cannot recover information the sensor never captured. No actual object/person AI model is included. For real thermal sensing use a compatible external thermal camera.
 
+## Install on Android Termux
 ```sh
-pkg update
-pkg install python git
+pkg update -y
+pkg install python git -y
 git clone https://github.com/hamaybaram1998-stack/pythermal-ai.git
 cd pythermal-ai
 python server.py
 ```
+Open **http://localhost:8765** in Chrome, grant camera permission and press Start Camera. Chrome Add to Home screen creates a shortcut, **not an APK**.
 
-Open http://localhost:8765 in Chrome and grant camera access. Keep Termux running. Use Chrome Add to Home screen for an app-like shortcut; this is not an APK.
+## Update existing installation
+```sh
+cd ~/pythermal-ai
+git pull
+python server.py
+```
+Stop the previous server with Ctrl+C before restarting. If port 8765 is busy, use `python server.py --port 8766`. Allow Chrome camera permission and use localhost rather than a LAN address.
 
-Features: live front/back camera, simulated palettes, brightness/contrast controls, PNG snapshots, offline local operation. No cloud uploads.
-
-Camera troubleshooting: allow camera permission, use localhost not a LAN IP, close other camera apps, try Flip. Port conflict: `python server.py --port 8766`.
-
-MIT licensed.
+MIT license. Tested at source-level only; real Android camera/device testing is still required.
