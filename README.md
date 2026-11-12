@@ -1,31 +1,32 @@
-# PyThermal AI v2.0 — Smart Night Vision
-A mobile-friendly **visible-light camera processing app** powered by a local Python HTTP server and JavaScript Canvas.
+# PyThermal AI v3.0 — Smart Night Vision + AI Object Detection
+
+A local Python HTTP server provides a browser camera app on Android/Termux.
 
 ## Features
-- Live front/rear camera and PNG snapshots
-- Thermal **color simulation**, green night-vision style, edge highlighting, normal mode
-- Automatic low-light brightness boost and temporal noise smoothing
-- Ambient image brightness indicator and pixel motion estimate
-- Offline/local processing; no camera frames uploaded
+- Thermal **color simulation**, night-vision enhancement, edge view, brightness and noise controls
+- Front/rear camera and PNG snapshot
+- Light level and simple frame-to-frame pixel motion estimate
+- **Optional COCO-SSD object detection** using TensorFlow.js, drawing bounding boxes and confidence scores. Enable AI explicitly; an internet connection is needed to download scripts and model. AI processing runs in the browser, but the external CDN/model hosting receives network requests. No video frames are intentionally uploaded by this app.
 
-**Important:** This app cannot measure temperature or heat, detect people in complete darkness, or see infrared thermal radiation using a normal RGB camera. AI cannot recover information the sensor never captured. No actual object/person AI model is included. For real thermal sensing use a compatible external thermal camera.
+## Important limitations
+This is **not** a thermometer, thermal camera, fever detector, or through-darkness sensor. Normal RGB cameras cannot measure real infrared heat. AI may miss objects, especially in low light. A compatible physical thermal sensor is required for actual heat imaging.
 
-## Install on Android Termux
-```sh
+## Termux install
+```bash
 pkg update -y
 pkg install python git -y
 git clone https://github.com/hamaybaram1998-stack/pythermal-ai.git
 cd pythermal-ai
 python server.py
 ```
-Open **http://localhost:8765** in Chrome, grant camera permission and press Start Camera. Chrome Add to Home screen creates a shortcut, **not an APK**.
+Open http://localhost:8765/?v=3 in Chrome and grant camera access. Tap Start Camera; optionally Enable AI (internet).
 
-## Update existing installation
-```sh
+## Update existing
+```bash
 cd ~/pythermal-ai
-git pull
+git pull origin main
 python server.py
 ```
-Stop the previous server with Ctrl+C before restarting. If port 8765 is busy, use `python server.py --port 8766`. Allow Chrome camera permission and use localhost rather than a LAN address.
+Stop old server first (Ctrl+C). If you cloned to `~/pythermal-v2`, update there instead. If port busy: `python server.py --port 8767` and open that port in Chrome.
 
-MIT license. Tested at source-level only; real Android camera/device testing is still required.
+App shortcut via Add to Home screen; **not an APK**. MIT licensed. Device-level AI performance has not yet been verified.
