@@ -103,3 +103,25 @@ $('start').addEventListener('click',openCamera);
 $('flip').addEventListener('click',()=>{facing=facing==='environment'?'user':'environment';void openCamera();});
 $('save').addEventListener('click',()=>{if(!stream){status.textContent='Start camera first';return;}canvas.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='pythermal-v3-'+Date.now()+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);},'image/png');});
 window.addEventListener('pagehide',()=>{cameraGeneration++;if(stream)stream.getTracks().forEach(t=>t.stop());cancelAnimationFrame(frame);});
+
+const messages={
+en:{language:'Language',subtitle:'Smart Night Vision + optional AI object recognition',start:'Start Camera',flip:'Flip Camera',save:'Save PNG',ai:'Enable AI (internet)',off:'Disable AI',mode:'Vision mode',palette:'Thermal palette',auto:'Auto low-light boost',brightness:'Brightness',contrast:'Contrast',smooth:'Noise smoothing',warning:'⚠️ Color thermal simulation only. No actual temperature readings. A physical infrared thermal sensor is required to detect heat in complete darkness.',ready:'Tap Start Camera to begin',thermal:'Thermal simulation',night:'Night vision',edges:'Smart edges',normal:'Normal',rainbow:'Rainbow',iron:'Iron',gray:'Grayscale'},
+ku:{language:'زمان',subtitle:'بینینی شەو و ناسینەوەی شتەکان بە AI',start:'کردنەوەی کامێرا',flip:'گۆڕینی کامێرا',save:'پاشەکەوتکردنی وێنە',ai:'چالاککردنی AI (ئینتەرنێت)',off:'ناچالاککردنی AI',mode:'شێوازی بینین',palette:'ڕەنگەکانی گەرمی',auto:'ڕووناککردنەوەی خۆکار',brightness:'ڕووناکی',contrast:'کۆنتراست',smooth:'کەمکردنەوەی خشە',warning:'⚠️ ئەمە تەنها لاساییکردنەوەی ڕەنگی گەرمییە. پلەی گەرمی ناپێوێت. بۆ دۆزینەوەی گەرمی لە تاریکیی تەواودا سێنسەری تایبەتی پێویستە.',ready:'بۆ دەستپێکردن کامێرا بکەرەوە',thermal:'لاساییکردنەوەی گەرمی',night:'بینینی شەو',edges:'کەنارەکانی شتەکان',normal:'ئاسایی',rainbow:'هەموو ڕەنگەکان',iron:'ئاسن',gray:'ڕەش و سپی'},
+ar:{language:'اللغة',subtitle:'رؤية ليلية ذكية والتعرف على الأشياء بالذكاء الاصطناعي',start:'تشغيل الكاميرا',flip:'تبديل الكاميرا',save:'حفظ الصورة',ai:'تفعيل الذكاء الاصطناعي (إنترنت)',off:'إيقاف الذكاء الاصطناعي',mode:'وضع الرؤية',palette:'ألوان المحاكاة الحرارية',auto:'تحسين الإضاءة تلقائياً',brightness:'السطوع',contrast:'التباين',smooth:'تقليل التشويش',warning:'⚠️ هذه محاكاة لونية وليست قياساً حقيقياً للحرارة. يتطلب كشف الحرارة في الظلام التام مستشعراً حرارياً خاصاً.',ready:'اضغط تشغيل الكاميرا للبدء',thermal:'محاكاة حرارية',night:'رؤية ليلية',edges:'حواف الأجسام',normal:'عادي',rainbow:'قوس قزح',iron:'حديد',gray:'رمادي'}
+};
+const lang=$('language');
+function translate(){
+ const locale=messages[lang.value]||messages.en;
+ document.documentElement.lang=lang.value;document.documentElement.dir=lang.value==='en'?'ltr':'rtl';
+ $('languageLabel').textContent=locale.language;
+ document.querySelector('header p').textContent=locale.subtitle;
+ for(const key of ['start','flip','save','ai','off'])$(key==='off'?'aiOff':key).textContent=locale[key];
+ for(const key of ['mode','palette','auto','brightness','contrast','smooth']){const label=$(key).closest('label');const node=label.querySelector('span');if(node)node.textContent=locale[key];else label.firstChild.textContent=locale[key]+' ';}
+ for(const key of ['thermal','night','edges','normal'])mode.querySelector('[value="'+key+'"]').textContent=locale[key];
+ for(const key of ['rainbow','iron','gray'])palette.querySelector('[value="'+key+'"]').textContent=locale[key];
+ document.querySelector('.warning').textContent=locale.warning;
+ if(!stream)status.textContent=locale.ready;
+ try{localStorage.setItem('pythermal-lang',lang.value);}catch(e){}
+}
+try{lang.value=localStorage.getItem('pythermal-lang')||'ku';}catch(e){lang.value='ku';}
+lang.addEventListener('change',translate);translate();
